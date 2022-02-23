@@ -12,6 +12,13 @@ use Core\AbstractController;
 
 class User extends AbstractController
 {
+    public function index()
+    {
+        $this->data['users'] = UserModel::getAllUsers();
+        $this->render('users/list');
+    }
+
+
     public function show($id)
     {
         echo 'User controller ID: ' . $id;
@@ -20,7 +27,7 @@ class User extends AbstractController
     public function register()
     {
 
-        $form = new FormHelper('user/create', 'POST');
+        $form = new FormHelper('users/create', 'POST');
 
         $form->input([
             'name' => 'name',
@@ -67,20 +74,20 @@ class User extends AbstractController
         ]);
 
         $this->data['form'] = $form->getForm();
-        $this->render('user/register');
+        $this->render('users/register');
     }
 
     public function edit()
     {
         if (!isset($_SESSION['user_id'])) {
-            Url::redirect('user/login');
+            Url::redirect('users/login');
         }
 
         $userId = $_SESSION['user_id'];
         $user = new UserModel();
         $user->load($userId);
 
-        $form = new FormHelper('user/update', 'POST');
+        $form = new FormHelper('users/update', 'POST');
         $form->input([
             'name' => 'name',
             'type' => 'text',
@@ -136,7 +143,7 @@ class User extends AbstractController
         ]);
 
         $this->data['form'] = $form->getForm();
-        $this->render('user/edit');
+        $this->render('users/edit');
 
     }
 
@@ -156,18 +163,18 @@ class User extends AbstractController
         }
 
         if ($user->getEmail() != $_POST['email']) {
-            if (Validator::checkEmail($_POST['email']) && UserModel::emailUnic($_POST['email'])) {
+            if (Validator::checkEmail($_POST['email']) && UserModel::isValueUnic('email', $_POST['email'], 'users')) {
                 $user->setEmail($_POST['email']);
             }
         }
 
         $user->save();
-        Url::redirect('user/edit');
+        Url::redirect('users/edit');
     }
 
     public function login()
     {
-        $form = new FormHelper('user/check', 'POST');
+        $form = new FormHelper('users/check', 'POST');
         $form->input([
             'name' => 'email',
             'type' => 'email',
@@ -181,18 +188,19 @@ class User extends AbstractController
         $form->input([
             'name' => 'login',
             'type' => 'submit',
-            'value' => 'login'
+            'value' => 'login',
+            'class' => 'login button'
         ]);
 
         $this->data['form'] = $form->getForm();
-        $this->render('user/login');
+        $this->render('users/login');
     }
 
     public function create()
     {
         $passMatch = Validator::checkPassword($_POST['password'], $_POST['password2']);
         $isEmailValid = Validator::checkEmail($_POST['email']);
-        $isEmailUnic = UserModel::emailUnic($_POST['email']);
+        $isEmailUnic = UserModel::isValueUnic('email', $_POST['email'], 'users');
         if ($passMatch && $isEmailValid && $isEmailUnic) {
             $user = new UserModel();
             $user->setName($_POST['name']);
@@ -201,8 +209,10 @@ class User extends AbstractController
             $user->setPassword(md5($_POST['password']));
             $user->setEmail($_POST['email']);
             $user->setCityId($_POST['city_id']);
+            $user->setActive(1);
+            $user->setRoleId(0);
             $user->save();
-            Url::redirect('user/login');
+            Url::redirect('users/login');
         } else {
             echo 'Patikrinkite duomenis';
         }
@@ -218,10 +228,10 @@ class User extends AbstractController
             $user->load($userId);
             $_SESSION['logged'] = true;
             $_SESSION['user_id'] = $userId;
-            $_SESSION['user'] = $user;
+            $_SESSION['users'] = $user;
             Url::redirect('/');
         } else {
-            Url::redirect('user/login');
+            Url::redirect('users/login');
         }
     }
 
@@ -230,9 +240,4 @@ class User extends AbstractController
         session_destroy();
     }
 
-    public function all()
-    {
-        $this->data['users'] = UserModel::getAllUsers();
-        $this->render('user/list');
-    }
 }

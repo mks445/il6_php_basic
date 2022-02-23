@@ -4,11 +4,25 @@ namespace Controller;
 
 use Core\AbstractController;
 use Helper\FormHelper;
+use Helper\Logger;
 use Helper\Url;
 use Model\Ad;
 
 class Catalog extends AbstractController
 {
+
+    public function index()
+    {
+        $this->data['count'] = Ad::count('ads');
+        $page = 0;
+        if(isset($_GET['p'])){
+            $page = (int)$_GET['p'] - 1;
+        }
+
+        $this->data['ads'] = Ad::getAllAds($page * 2, 2);
+        $this->render('catalog/all');
+    }
+
     public function add()
     {
 
@@ -52,6 +66,10 @@ class Catalog extends AbstractController
 
     public function create()
     {
+        $slug = Url::slug($_POST['title']);
+        while (!Ad::isValueUnic('slug', $slug, 'ads')) {
+            $slug = $slug . rand(0, 100);
+        }
         $ad = new Ad();
         $ad->setTitle($_POST['title']);
         $ad->setDescription($_POST['description']);
@@ -61,6 +79,8 @@ class Catalog extends AbstractController
         $ad->setYear($_POST['year']);
         $ad->setImage($_POST['image']);
         $ad->setActive(1);
+        $ad->setSlug($slug);
+        $ad->setViews(0);
         $ad->setTypeId(1);
         $ad->setUserId($_SESSION['user_id']);
         $ad->save();
@@ -139,19 +159,25 @@ class Catalog extends AbstractController
         $ad->save();
     }
 
-    public function all()
-    {
-        $this->data['ads'] = Ad::getAllAds();
-        $this->render('catalog/all');
-    }
 
-    public function show($id)
+
+    public function show($slug)
     {
         $ad = new Ad();
-        $this->data['ad'] = $ad->load($id);
-        $this->render('catalog/single');
-
+        $ad->loadBySlug($slug);
+        $newViews = (int)$ad->getViews() + 1;
+        $ad->setViews($newViews);
+        $ad->save();
+        $this->data['ad'] = $ad;
+        $this->data['title'] = $ad->getTitle();
+        $this->data['meta_description'] = $ad->getDescription();
+        if ($this->data['ad']) {
+            $this->render('catalog/single');
+        } else {
+            $this->render('parts/errors/error404');
+        }
     }
 
 
 }
+

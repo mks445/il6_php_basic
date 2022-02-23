@@ -28,8 +28,18 @@ class Ad extends AbstractModel
 
     private $active;
 
-    public function __construct()
+    private $slug;
+
+    private $views;
+
+    private $vin;
+
+
+    public function __construct($id = null)
     {
+        if ($id !== null) {
+            $this->load($id);
+        }
         $this->table = 'ads';
     }
 
@@ -182,6 +192,36 @@ class Ad extends AbstractModel
         $this->active = $active;
     }
 
+    public function getSlug()
+    {
+        return $this->slug;
+    }
+
+    public function setSlug($slug)
+    {
+        $this->slug = $slug;
+    }
+
+    public function getVin()
+    {
+        return $this->vin;
+    }
+
+    public function setVin($vin)
+    {
+        $this->vin = $vin;
+    }
+
+    public function setViews($views)
+    {
+        $this->views = $views;
+    }
+
+    public function getViews()
+    {
+        return $this->views;
+    }
+
     protected function assignData()
     {
         $this->data = [
@@ -193,6 +233,11 @@ class Ad extends AbstractModel
             'year' => $this->year,
             'type_id' => $this->typeId,
             'user_id' => $this->userId,
+            'image' => $this->image,
+            'active' => $this->active,
+            'slug' => $this->slug,
+            'vin' => $this->vin,
+            'views' => $this->views
         ];
     }
 
@@ -211,15 +256,75 @@ class Ad extends AbstractModel
             $this->year = $ad['year'];
             $this->typeId = $ad['type_id'];
             $this->userId = $ad['user_id'];
+            $this->image = $ad['image'];
+            $this->active = $ad['active'];
+            $this->slug = $ad['slug'];
+            $this->vin = $ad['vin'];
+            $this->views = $ad['views'];
         }
 
         return $this;
     }
 
-    public static function getAllAds()
+    public function loadBySlug($slug)
     {
         $db = new DBHelper();
-        $data = $db->select()->from('ads')->where('active', 1)->get();
+        $rez = $db->select()->from($this->table)->where('slug', $slug)->getOne();
+        if (!empty($rez)) {
+            $this->load($rez['id']);
+            return $this;
+        } else {
+            return false;
+        }
+    }
+
+    public static function getAllAds($page = null, $limit = null)
+    {
+        $db = new DBHelper();
+        $db->select()->from('ads')->where('active', 1);
+        if ($limit != null) {
+            $db->limit($limit);
+        }
+        if ($page != null) {
+            $db->offset($page);
+        }
+        $data = $db->get();
+        $ads = [];
+        foreach ($data as $element) {
+            $ad = new Ad();
+            $ad->load($element['id']);
+            $ads[] = $ad;
+        }
+        return $ads;
+    }
+
+    public static function getPopularAds($limit)
+    {
+        $db = new DBHelper();
+        $data = $db->select()
+            ->from('ads')
+            ->where('active', 1)
+            ->orderBy('views', 'DESC')
+            ->limit($limit)
+            ->get();
+        $ads = [];
+        foreach ($data as $element) {
+            $ad = new Ad();
+            $ad->load($element['id']);
+            $ads[] = $ad;
+        }
+        return $ads;
+    }
+
+    public static function getLatest($limit)
+    {
+        $db = new DBHelper();
+        $data = $db->select()
+            ->from('ads')
+            ->where('active', 1)
+            ->orderBy('id', 'DESC')
+            ->limit($limit)
+            ->get();
         $ads = [];
         foreach ($data as $element) {
             $ad = new Ad();
